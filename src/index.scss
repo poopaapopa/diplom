@@ -1,0 +1,56 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
+body {
+  font-family: 'Inter', sans-serif;
+  margin: 0;
+  overflow: hidden;
+}
+
+$node-color: #222;
+$dot-size: 8px;
+$dot-color: #555;
+$node-size: 50px;
+
+.fsm-node {
+  width: $node-size;
+  height: $node-size;
+  border-radius: 50%;
+  border: 3px solid $node-color;
+  background: white;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  position: relative;
+
+  &.initial {
+    border-width: 4px;
+  }
+
+  &__label {
+    font-size: 12px;
+    font-weight: 600;
+    user-select: none;
+  }
+
+  &__loop-dot {
+    position: absolute;
+    top: -10px;
+    left: 50%;
+    transform: translateX(-50%);
+    width: $dot-size;
+    height: $dot-size;
+    background-color: $dot-color;
+    border: 1px solid white;
+    border-radius: 50%;
+    cursor: pointer;
+  }
+
+  .react-flow__handle {
+    width: $dot-size;
+    height: $dot-size;
+    background: $dot-color;
+    border: 1px solid white;
+
+    &-left { left: -6px; }
+    &-right { right: -6px; }
+  }
+}

@@ -1,41 +1,30 @@
 import React, { useCallback, useState } from 'react';
 import {
+  Edge,
   ReactFlow,
   addEdge,
   Background,
   Controls,
   applyEdgeChanges,
   applyNodeChanges,
-  Handle,
   Position,
   useReactFlow,
   ReactFlowProvider,
-  NodeProps,
-  OnConnect,
   MarkerType,
+  Node,
+  NodeChange,
+  EdgeChange,
+  OnConnect,
 } from '@xyflow/react';
 import '@xyflow/react/dist/style.css';
-
-const FSMNode = ({ data }: NodeProps) => {
-  return (
-    <div className="fsm-node">
-      <Handle
-        type="target"
-        position={Position.Left}
-        style={{ background: '#555', width: '8px', height: '8px' }}
-      />
-      <div className="fsm-node-inner">{data.label}</div>
-      <Handle
-        type="source"
-        position={Position.Right}
-        style={{ background: '#555', width: '8px', height: '8px' }}
-      />
-    </div>
-  );
-};
+import FSMNode from './components/node';
+import SelfLoopEdge from "./components/selfLoop";
 
 const nodeTypes = {
   fsmNode: FSMNode,
+};
+const edgeTypes = {
+  selfloop: SelfLoopEdge,
 };
 
 const defaultEdgeOptions = {
@@ -49,7 +38,7 @@ const defaultEdgeOptions = {
   },
 };
 
-const initialNodes = [
+const initialNodes: Node[] = [
   {
     id: 'start-anchor',
     type: 'input',
@@ -70,11 +59,12 @@ const initialNodes = [
   { id: '0', type: 'fsmNode', position: { x: 100, y: 100 }, data: { label: '0' } },
 ];
 
-const initialEdges = [
+const initialEdges: Edge[] = [
   {
     id: 'start-edge',
     source: 'start-anchor',
     target: '0',
+    targetHandle: 'main-target',
     selectable: false,
     deletable: false,
     markerEnd: {
@@ -89,23 +79,38 @@ const initialEdges = [
 ];
 
 function Flow() {
-  const [nodes, setNodes] = useState(initialNodes);
-  const [edges, setEdges] = useState(initialEdges);
+  const [nodes, setNodes] = useState<Node[]>(initialNodes);
+  const [edges, setEdges] = useState<Edge[]>(initialEdges);
 
   const { screenToFlowPosition } = useReactFlow();
 
   const onNodesChange = useCallback(
-    (changes: any) => setNodes((nds) => applyNodeChanges(changes, nds)),
+    (changes: NodeChange[]) => setNodes((nds) => applyNodeChanges(changes, nds)),
     []
   );
   const onEdgesChange = useCallback(
-    (changes: any) => setEdges((eds) => applyEdgeChanges(changes, eds)),
+    (changes: EdgeChange[]) => setEdges((eds) => applyEdgeChanges(changes, eds)),
     []
   );
-  const onConnect: OnConnect = useCallback(
-    (params) => setEdges((eds) => addEdge(params, eds)),
-    []
-  );
+  const onConnect: OnConnect = useCallback((params) => {
+    setEdges((eds) => {
+      const isSelfLoop = params.source === params.target;
+
+      if (!isSelfLoop)
+        return addEdge(params, eds);
+
+      const loopId = `loop-${params.source}`;
+      if (eds.some((e) => e.id === loopId)) return eds;
+
+      return addEdge({
+        ...params,
+        id: loopId,
+        type: 'selfloop',
+          sourceHandle: 'loop-source',
+          targetHandle: 'loop-target',
+        }, eds);
+    });
+  }, [setEdges]);
 
   const onPaneDoubleClick = useCallback(
     (event: React.MouseEvent) => {
@@ -124,7 +129,7 @@ function Flow() {
 
       setNodes((nds) => nds.concat(newNode));
     },
-    [nodes, screenToFlowPosition]
+    [nodes.length, screenToFlowPosition]
   );
 
   return (
@@ -136,6 +141,7 @@ function Flow() {
         onEdgesChange={onEdgesChange}
         onConnect={onConnect}
         nodeTypes={nodeTypes}
+        edgeTypes={edgeTypes}
         defaultEdgeOptions={defaultEdgeOptions}
         onPaneClick={(e) => {
           if (e.detail === 2) onPaneDoubleClick(e);
