@@ -9,6 +9,7 @@ import {
 
 const FSMNode = ({ id, data }: NodeProps) => {
   const { setEdges, getEdges } = useReactFlow();
+  const nodeClasses = `fsm-node ${data.isInitial ? 'initial' : ''} ${data.isFinal ? 'final' : ''}`;
 
   const toggleLoop = (e: React.MouseEvent) => {
     e.stopPropagation();
@@ -42,7 +43,7 @@ const FSMNode = ({ id, data }: NodeProps) => {
   };
 
   return (
-    <div className={`fsm-node ${data.isInitial ? 'initial' : ''}`}>
+    <div className={nodeClasses}>
       <div className="fsm-node__loop-dot" onClick={toggleLoop} />
 
       <Handle

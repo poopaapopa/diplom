@@ -92,6 +92,22 @@ function Flow() {
     (changes: EdgeChange[]) => setEdges((eds) => applyEdgeChanges(changes, eds)),
     []
   );
+  const onNodeDoubleClick = useCallback((event: React.MouseEvent, node: Node) => {
+    setNodes((nds) =>
+      nds.map((n) => {
+        if (n.id === node.id) {
+          return {
+            ...n,
+            data: {
+              ...n.data,
+              isFinal: !n.data.isFinal,
+            },
+          };
+        }
+        return n;
+      })
+    );
+  }, [setNodes]);
   const onConnect: OnConnect = useCallback((params) => {
     setEdges((eds) => {
       const isSelfLoop = params.source === params.target;
@@ -140,6 +156,7 @@ function Flow() {
         onNodesChange={onNodesChange}
         onEdgesChange={onEdgesChange}
         onConnect={onConnect}
+        onNodeDoubleClick={onNodeDoubleClick}
         nodeTypes={nodeTypes}
         edgeTypes={edgeTypes}
         defaultEdgeOptions={defaultEdgeOptions}
