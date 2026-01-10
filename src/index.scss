@@ -66,3 +66,19 @@ $node-size: 50px;
     &-right { right: -6px; }
   }
 }
+
+.fsm-edge-input {
+  width: 30px;
+  height: 20px;
+  border-radius: 4px;
+  text-align: center;
+  font-weight: 500;
+  font-size: 14px;
+  background: transparent;
+  outline: none;
+
+  &:focus {
+    border-color: #555;
+    box-shadow: 0 0 4px rgba(0,0,0,0.2);
+  }
+}

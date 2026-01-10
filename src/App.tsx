@@ -19,15 +19,18 @@ import {
 import '@xyflow/react/dist/style.css';
 import FSMNode from './components/node';
 import SelfLoopEdge from "./components/selfLoop";
+import TransitionEdge from "./components/edge";
 
 const nodeTypes = {
   fsmNode: FSMNode,
 };
 const edgeTypes = {
   selfloop: SelfLoopEdge,
+  transition: TransitionEdge,
 };
 
 const defaultEdgeOptions = {
+  type: 'transition',
   markerEnd: {
     type: MarkerType.ArrowClosed,
     color: '#333',
@@ -44,17 +47,11 @@ const initialNodes: Node[] = [
     type: 'input',
     sourcePosition: Position.Right,
     data: { label: '' },
-    position: { x: 25, y: 124.2 },
+    position: { x: 25, y: 114.2 },
     draggable: false,
     connectable: false,
     selectable: false,
-    style: {
-      opacity: 0,
-      width: 0,
-      height: 0,
-      padding: 0,
-      pointerEvents: 'none'
-    },
+    style: { opacity: 0, width: 0, height: 0, pointerEvents: 'none' },
   },
   { id: '0', type: 'fsmNode', position: { x: 100, y: 100 }, data: { label: '0' } },
 ];
@@ -63,6 +60,7 @@ const initialEdges: Edge[] = [
   {
     id: 'start-edge',
     source: 'start-anchor',
+    type: 'default',
     target: '0',
     targetHandle: 'main-target',
     selectable: false,
@@ -70,10 +68,6 @@ const initialEdges: Edge[] = [
     markerEnd: {
       type: MarkerType.ArrowClosed,
       color: '#333',
-    },
-    style: {
-      strokeWidth: 2,
-      stroke: '#333',
     },
   },
 ];
@@ -163,7 +157,7 @@ function Flow() {
         onPaneClick={(e) => {
           if (e.detail === 2) onPaneDoubleClick(e);
         }}
-        defaultViewport={{ x: 100, y: 75, zoom: 2 }}
+        defaultViewport={{ x: 100, y: 85, zoom: 2 }}
       >
         <Background />
         <Controls />
