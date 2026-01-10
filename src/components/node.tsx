@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useEffect, useRef } from 'react';
 import {
   Handle,
   Position,
@@ -8,7 +8,8 @@ import {
 } from '@xyflow/react';
 
 const FSMNode = ({ id, data }: NodeProps) => {
-  const { setEdges, getEdges } = useReactFlow();
+  const { setEdges, getEdges, setNodes } = useReactFlow();
+  const inputRef = useRef<HTMLInputElement>(null);
   const nodeClasses = `fsm-node ${data.isInitial ? 'initial' : ''} ${data.isFinal ? 'final' : ''}`;
 
   const toggleLoop = (e: React.MouseEvent) => {
@@ -42,6 +43,29 @@ const FSMNode = ({ id, data }: NodeProps) => {
     }
   };
 
+  useEffect(() => {
+    inputRef.current?.focus();
+  }, [id, setNodes]);
+
+  const onLabelChange = (evt: React.ChangeEvent<HTMLInputElement>) => {
+    setNodes((nds) =>
+      nds.map((n) => {
+        if (n.id === id) {
+          return { ...n, data: { ...n.data, label: evt.target.value } };
+        }
+        return n;
+      })
+    );
+  };
+
+  const onBlur = () => {
+    if (!data.label || (data.label as string).trim() === "") {
+      setNodes((nds) =>
+        nds.map((n) => (n.id === id ? { ...n, data: { ...n.data, label: `q${id}` } } : n))
+      );
+    }
+  };
+
   return (
     <div className={nodeClasses}>
       <div className="fsm-node__loop-dot" onClick={toggleLoop} />
@@ -50,17 +74,26 @@ const FSMNode = ({ id, data }: NodeProps) => {
         type="source"
         position={Position.Top}
         id="loop-source"
+        isConnectable={false}
         style={{ left: '60%', opacity: 0, pointerEvents: 'none' }}
       />
       <Handle
         type="target"
         position={Position.Top}
         id="loop-target"
+        isConnectable={false}
         style={{ left: '40%', opacity: 0, pointerEvents: 'none' }}
       />
 
       <Handle type="target" position={Position.Left} id="main-target" />
-      <div className="fsm-node-inner">{data.label as string}</div>
+      <input
+        ref={inputRef}
+        className="fsm-input"
+        value={data.label as string}
+        onChange={onLabelChange}
+        onBlur={onBlur}
+        maxLength={3}
+      />
       <Handle type="source" position={Position.Right} id="main-source" />
     </div>
   );

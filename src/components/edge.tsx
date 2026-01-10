@@ -37,7 +37,24 @@ function TransitionEdge({
   });
 
   const onInputChange = (evt: React.ChangeEvent<HTMLInputElement>) => {
-    setEdges((eds) => eds.map((e) => (e.id === id ? { ...e, data: { ...e.data, symbol: evt.target.value } } : e)));
+    setEdges((eds) =>
+      eds.map((edge) => {
+        if (edge.id === id) {
+          return { ...edge, data: { ...edge.data, symbol: evt.target.value } };
+        }
+        return edge;
+      })
+    );
+  };
+
+  const onBlur = () => {
+    const symbol = (data?.symbol as string) || "";
+
+    if (symbol.trim() === "") {
+      setEdges((eds) =>
+        eds.map((e) => (e.id === id ? { ...e, data: { ...e.data, symbol: "ε" } } : e))
+      );
+    }
   };
 
   return (
@@ -54,9 +71,10 @@ function TransitionEdge({
         >
           <input
             ref={inputRef}
-            className="fsm-edge-input"
-            defaultValue={data?.symbol as string || ''}
+            className="fsm-input"
+            defaultValue={data?.symbol as string}
             onChange={onInputChange}
+            onBlur={onBlur}
             maxLength={1}
           />
         </div>

@@ -53,7 +53,7 @@ const initialNodes: Node[] = [
     selectable: false,
     style: { opacity: 0, width: 0, height: 0, pointerEvents: 'none' },
   },
-  { id: '0', type: 'fsmNode', position: { x: 100, y: 100 }, data: { label: '0' } },
+  { id: '0', type: 'fsmNode', position: { x: 100, y: 100 }, data: { label: 'q0' } },
 ];
 
 const initialEdges: Edge[] = [
@@ -134,7 +134,7 @@ function Flow() {
         id: newNodeId,
         type: 'fsmNode',
         position,
-        data: { label: newNodeId },
+        data: { label: `q${newNodeId}` },
       };
 
       setNodes((nds) => nds.concat(newNode));
