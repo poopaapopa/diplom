@@ -20,6 +20,7 @@ import '@xyflow/react/dist/style.css';
 import FSMNode from './components/node';
 import SelfLoopEdge from "./components/selfLoop";
 import TransitionEdge from "./components/edge";
+import {fsmToRegex} from "./utils/convertToRegex.ts";
 
 const nodeTypes = {
   fsmNode: FSMNode,
@@ -142,6 +143,11 @@ function Flow() {
     [nodes.length, screenToFlowPosition]
   );
 
+  const generateRegex = () => {
+    const regex = fsmToRegex(nodes, edges);
+    alert(`Regular Expression: ${regex}`);
+  };
+
   return (
     <div style={{ width: '100vw', height: '100vh' }}>
       <ReactFlow
@@ -161,6 +167,12 @@ function Flow() {
       >
         <Background />
         <Controls />
+        <button
+          onClick={generateRegex}
+          style={{ position: 'absolute', right: 20, top: 20, zIndex: 100 }}
+        >
+          Convert to Regex
+        </button>
       </ReactFlow>
     </div>
   );

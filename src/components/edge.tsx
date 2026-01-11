@@ -20,21 +20,46 @@ function TransitionEdge({
   markerEnd,
 }: EdgeProps) {
   const { setEdges } = useReactFlow();
+
   const inputRef = useRef<HTMLInputElement>(null);
+  useEffect(() => { inputRef.current?.focus(); }, [id, setEdges]);
 
-  useEffect(() => {
-    inputRef.current?.focus();
-    inputRef.current?.select();
-  }, [id, setEdges]);
+  const isBackward = sourceX > targetX;
+  const distance = Math.abs(sourceX - targetX);
 
-  const [edgePath, labelX, labelY] = getBezierPath({
-    sourceX,
-    sourceY,
-    sourcePosition,
-    targetX,
-    targetY,
-    targetPosition,
-  });
+  let edgePath;
+  let labelX;
+  let labelY;
+
+  if (isBackward) {
+    const curveHeight = 35 + distance * 0.12;
+    const offsetX = 40;
+
+    const cp1x = sourceX + offsetX;
+    const cp1y = sourceY - curveHeight;
+
+    const cp2x = targetX - offsetX;
+    const cp2y = targetY - curveHeight;
+
+    edgePath = `M ${sourceX} ${sourceY} C ${cp1x} ${cp1y} ${cp2x} ${cp2y} ${targetX} ${targetY}`;
+
+    labelX = (sourceX + targetX) / 2;
+    const midY = (sourceY + targetY) / 2;
+    labelY = midY - (curveHeight * 0.75);
+
+  } else {
+    const [path, lx, ly] = getBezierPath({
+      sourceX,
+      sourceY,
+      sourcePosition,
+      targetX,
+      targetY,
+      targetPosition,
+    });
+    edgePath = path;
+    labelX = lx;
+    labelY = ly;
+  }
 
   const onInputChange = (evt: React.ChangeEvent<HTMLInputElement>) => {
     setEdges((eds) =>
