@@ -5,6 +5,12 @@ body {
   overflow: hidden;
 }
 
+.layout {
+  width: 100vw;
+  height: 100vh;
+  position: relative;
+}
+
 $node-color: #222;
 $dot-size: 8px;
 $dot-color: #555;
@@ -81,4 +87,110 @@ $node-size: 50px;
     border-color: #555;
     box-shadow: 0 0 4px rgba(0,0,0,0.2);
   }
+}
+
+$primary: #222;
+$accent: #3b82f6;
+$bg-glass: rgba(255, 255, 255, 0.8);
+$shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.1), 0 8px 10px -6px rgba(0, 0, 0, 0.1);
+
+.regex-footer {
+  position: fixed;
+  bottom: 25px;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 1000;
+  width: 100%;
+  max-width: 600px;
+  padding: 0 20px;
+  pointer-events: none;
+}
+
+.regex-card {
+  pointer-events: all;
+  background: $bg-glass;
+  backdrop-filter: blur(12px);
+  border: 1px solid rgba(255, 255, 255, 0.3);
+  border-radius: 16px;
+  padding: 16px 24px;
+  box-shadow: $shadow;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  transition: all 0.3s ease;
+
+  &.is-hint {
+    .regex-display {
+      color: #999;
+      font-size: 16px;
+      font-family: inherit;
+    }
+    border-color: rgba(0, 0, 0, 0.05);
+  }
+}
+
+.regex-label {
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  color: #666;
+  font-weight: 700;
+  margin-left: 4px;
+}
+
+.regex-input-wrapper {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  background: white;
+  padding: 4px 8px 4px 16px;
+  border-radius: 10px;
+  border: 1px solid #eee;
+}
+
+.regex-display {
+  flex: 1;
+  border: none;
+  background: transparent;
+  font-family: 'JetBrains Mono', 'Fira Code', monospace;
+  font-size: 18px;
+  color: $primary;
+  outline: none;
+  padding: 8px 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+
+  &::placeholder {
+    color: #ccc;
+    font-style: italic;
+  }
+}
+
+.copy-svg-btn {
+  background: none;
+  border: none;
+  padding: 8px;
+  cursor: pointer;
+  color: #1e1e1e;
+  border-radius: 8px;
+  transition: all 0.2s ease;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
+  svg {
+    width: 22px;
+    height: 22px;
+    transition: transform 0.1s ease;
+  }
+
+  &:hover {
+    background: rgba(0, 0, 0, 0.05);
+    transform: scale(0.9);
+  }
+}
+
+.copy-svg-btn:empty {
+  display: none;
 }
