@@ -21,6 +21,7 @@ import FSMNode from './components/node';
 import SelfLoopEdge from "./components/selfLoop";
 import TransitionEdge from "./components/edge";
 import { fsmToRegex } from "./utils/convertToRegex.ts";
+import {regexToFSM} from "./utils/convertToFSM.ts";
 
 const nodeTypes = {
   fsmNode: FSMNode,
@@ -88,7 +89,6 @@ function Flow() {
     (changes: EdgeChange[]) => setEdges((eds) => applyEdgeChanges(changes, eds)),
     []
   );
-
   const onNodeDoubleClick = useCallback((event: React.MouseEvent, node: Node) => {
     setNodes((nds) =>
       nds.map((n) => {
@@ -155,6 +155,19 @@ function Flow() {
                  regex.includes("Сделайте") ||
                  regex.includes("Путь");
 
+  const handleRegexChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const val = e.target.value;
+    setRegex(val);
+  };
+
+  const buildGraphFromRegex = () => {
+    const result = regexToFSM(regex, nodes, edges);
+    if (result) {
+      setNodes(result.nodes);
+      setEdges(result.edges);
+    }
+  };
+
   return (
     <div className="layout">
       <ReactFlow
@@ -186,8 +199,8 @@ function Flow() {
             <input
               className="regex-display"
               value={regex}
-              readOnly
-              placeholder="Создайте автомат..."
+              onChange={handleRegexChange}
+              onKeyDown={(e) => e.key === 'Enter' && buildGraphFromRegex()}
             />
 
             {!isHint && (
@@ -202,6 +215,10 @@ function Flow() {
                 </svg>
               </button>
             )}
+
+            <button className="build-btn" onClick={buildGraphFromRegex}>
+              Собрать
+            </button>
           </div>
         </div>
       </div>

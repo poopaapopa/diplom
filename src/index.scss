@@ -27,10 +27,6 @@ $node-size: 50px;
   justify-content: center;
   position: relative;
 
-  &.initial {
-    border-width: 4px;
-  }
-
   &.final::after {
     content: '';
     position: absolute;
@@ -193,4 +189,20 @@ $shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.1), 0 8px 10px -6px rgba(0, 0, 0, 0.1)
 
 .copy-svg-btn:empty {
   display: none;
+}
+
+.build-btn {
+  background: #3b82f6;
+  color: white;
+  border: none;
+  padding: 8px 12px;
+  border-radius: 8px;
+  cursor: pointer;
+  font-size: 18px;
+  transition: all 0.2s;
+
+  &:hover {
+    background: #2563eb;
+    transform: scale(0.95);
+  }
 }

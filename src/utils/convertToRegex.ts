@@ -4,13 +4,12 @@ export const fsmToRegex = (nodes: Node[], edges: Edge[]): string => {
   const initialState = nodes.find(n => n.data?.isInitial || n.id === '0' || n.id === 'q0');
   const finalNodes = nodes.filter(n => n.data?.isFinal);
 
-  if (!initialState) return "Начните с создания начального узла";
-  if (finalNodes.length === 0) return "Сделайте хотя бы один узел конечным";
+  if (!initialState || finalNodes.length === 0) return "";
 
   let L: Record<string, Record<string, string>> = {};
 
   const add = (u: string, v: string, exp: string) => {
-    if (!exp || exp === '') exp = 'ε';
+    if (!exp || exp === '∅') return;
     if (!L[u]) L[u] = {};
     L[u][v] = L[u][v] ? simplifyOr(L[u][v], exp) : exp;
   };
@@ -23,7 +22,14 @@ export const fsmToRegex = (nodes: Node[], edges: Edge[]): string => {
   add(S, initialState.id, 'ε');
   finalNodes.forEach(f => add(f.id, E, 'ε'));
 
-  const stateIds = nodes.map(n => n.id).filter(id => id !== S && id !== E);
+  const stateIds = nodes
+    .map(n => n.id)
+    .filter(id => id !== S && id !== E)
+    .sort((a, b) => {
+      // Стратегия: удаляем сначала те узлы, у которых меньше всего связей
+      const deg = (id: string) => (Object.keys(L[id] || {}).length + Object.keys(L).filter(k => L[k][id]).length);
+      return deg(a) - deg(b);
+    });
 
   for (const k of stateIds) {
     const precursors = Object.keys(L).filter(i => i !== k && L[i][k]);
@@ -36,7 +42,9 @@ export const fsmToRegex = (nodes: Node[], edges: Edge[]): string => {
         const Rkk = L[k][k];
         const Rij = L[i][j];
 
-        const pathThroughK = simplifyConcat(simplifyConcat(Rik, simplifyStar(Rkk)), Rkj);
+        const loop = Rkk ? simplifyStar(Rkk) : "";
+        const pathThroughK = simplifyConcat(simplifyConcat(Rik, loop), Rkj);
+
         L[i][j] = Rij ? simplifyOr(Rij, pathThroughK) : pathThroughK;
       }
     }
@@ -48,210 +56,160 @@ export const fsmToRegex = (nodes: Node[], edges: Edge[]): string => {
   return res ? cleanRegex(res) : "Путь не найден";
 };
 
-// --- ТОКЕНИЗАЦИЯ ---
-// Разбивает строку на блоки: 'a+', '1', '(a|b)*', 'bb' -> ['a+', '1', '(a|b)*', 'b', 'b']
-function getTokens(s: string): string[] {
-  if (s === 'ε' || s === '') return [];
-  const tokens: string[] = [];
-  let i = 0;
-  while (i < s.length) {
-    let token = "";
-    if (s[i] === '(') {
-      let balance = 1;
-      let start = i;
-      i++;
-      while (i < s.length && balance > 0) {
-        if (s[i] === '(') balance++;
-        if (s[i] === ')') balance--;
-        i++;
-      }
-      token = s.slice(start, i);
-    } else {
-      token = s[i];
-      i++;
-    }
-    // Захватываем квантификаторы *, + за токеном
-    while (i < s.length && (s[i] === '*' || s[i] === '+')) {
-      token += s[i];
-      i++;
-    }
-    tokens.push(token);
-  }
-  return tokens;
-}
+// --- ЛОГИКА УПРОЩЕНИЯ ---
 
-// --- УПРОЩЕНИЕ OR ---
 function simplifyOr(a: string, b: string): string {
   if (a === b) return a;
-  if (!a || a === '∅' || a === 'ε') return (b && b !== '∅') ? b : 'ε';
-  if (!b || b === '∅' || b === 'ε') return (a && a !== '∅') ? a : 'ε';
+  if (a === 'ε' && b.endsWith('+')) return wrap(b.slice(0, -1)) + '*';
+  if (b === 'ε' && a.endsWith('+')) return wrap(a.slice(0, -1)) + '*';
 
-  const terms = Array.from(new Set([...splitByOr(a), ...splitByOr(b)]))
-    .filter(t => t !== '∅');
+  let terms = Array.from(new Set([...splitByOr(a), ...splitByOr(b)]))
+    .filter(t => t !== '∅' && t !== '');
 
   if (terms.length === 1) return terms[0];
-
   return factorize(terms);
 }
 
 function factorize(terms: string[]): string {
   if (terms.length <= 1) return terms[0] || 'ε';
 
-  const tokenized = terms.map(getTokens);
+  // Очистка: если есть и 'a', и 'a*', оставляем 'a*'
+  const simpleTerms = terms.filter(t => {
+    if (t === 'ε') return true;
+    const base = t.replace(/[*+]$/, '');
+    return !terms.some(other => other === base + '*' && other !== t);
+  });
 
-  // 1. Поиск общего СУФФИКСА (справа)
-  let suffixTokens: string[] = [];
-  let minLen = Math.min(...tokenized.map(t => t.length));
-  for (let i = 1; i <= minLen; i++) {
-    const last = tokenized[0][tokenized[0].length - i];
-    if (tokenized.every(t => t[t.length - i] === last)) {
-      suffixTokens.unshift(last);
-    } else break;
+  const tokenized = simpleTerms.map(getTokens);
+  const minLen = Math.min(...tokenized.map(t => t.length));
+
+  // 1. Вынос префикса
+  let pLen = 0;
+  while (pLen < minLen && tokenized.every(t => t[pLen] === tokenized[0][pLen])) {
+    pLen++;
+  }
+  if (pLen > 0) {
+    const pref = tokenized[0].slice(0, pLen).join('');
+    const rest = tokenized.map(t => t.slice(pLen).join('') || 'ε');
+    return simplifyConcat(pref, wrapOr(factorize(rest)));
   }
 
-  if (suffixTokens.length > 0) {
-    const suffixStr = suffixTokens.join('');
-    const remaining = tokenized.map(t => {
-      const rest = t.slice(0, t.length - suffixTokens.length).join('');
-      return rest === '' ? 'ε' : rest;
-    });
-    return simplifyConcat(wrapOr(factorize(remaining)), suffixStr);
+  // 2. Вынос суффикса
+  let sLen = 0;
+  while (sLen < minLen && tokenized.every(t => t[t.length - 1 - sLen] === tokenized[0][tokenized[0].length - 1 - sLen])) {
+    sLen++;
   }
-
-  // 2. Поиск общего ПРЕФИКСА (слева)
-  let prefixTokens: string[] = [];
-  for (let i = 0; i < minLen; i++) {
-    const first = tokenized[0][i];
-    if (tokenized.every(t => t[i] === first)) {
-      prefixTokens.push(first);
-    } else break;
-  }
-
-  if (prefixTokens.length > 0) {
-    const prefixStr = prefixTokens.join('');
-    const remaining = tokenized.map(t => {
-      const rest = t.slice(prefixTokens.length).join('');
-      return rest === '' ? 'ε' : rest;
-    });
-    return simplifyConcat(prefixStr, wrapOr(factorize(remaining)));
-  }
-
-  // Правило Kleene: ε | R+ -> R* ИЛИ ε | RR* -> R*
-  if (terms.includes('ε')) {
-    const others = terms.filter(t => t !== 'ε');
-    if (others.length === 1) {
-      let r = others[0];
-      if (r.endsWith('+')) return r.slice(0, -1) + '*';
-
-      const tokens = getTokens(r);
-      if (tokens.length > 1) {
-        const last = tokens[tokens.length - 1];
-        const prev = tokens.slice(0, -1).join('');
-        if (last.endsWith('*') && (prev === last.slice(0, -1) || wrap(prev) === last.slice(0, -1))) {
-          return last;
-        }
-      }
-    }
+  if (sLen > 0) {
+    const suff = tokenized[0].slice(tokenized[0].length - sLen).join('');
+    const rest = tokenized.map(t => t.slice(0, t.length - sLen).join('') || 'ε');
+    return simplifyConcat(wrapOr(factorize(rest)), suff);
   }
 
   return terms.sort().join('|');
 }
 
-// --- УПРОЩЕНИЕ CONCAT ---
 function simplifyConcat(a: string, b: string): string {
-  if (!a || a === 'ε' || a === '') return b;
-  if (!b || b === 'ε' || b === '') return a;
+  if (!a || a === 'ε') return b;
+  if (!b || b === 'ε') return a;
 
-  const tA = getTokens(a);
-  const tB = getTokens(b);
+  const sA = strip(a);
+  const sB = strip(b);
 
-  // Правило: R R* -> R+
-  if (tB.length === 1 && tB[0].endsWith('*')) {
-    const base = tB[0].slice(0, -1);
-    if (a === base || wrap(a) === base) return wrap(base) + '+';
-  }
-  // Правило: R* R -> R+
-  if (tA.length === 1 && tA[0].endsWith('*')) {
-    const base = tA[0].slice(0, -1);
-    if (b === base || wrap(b) === base) return wrap(base) + '+';
-  }
+  // a a* -> a+, a* a -> a+
+  if (sB.endsWith('*') && sA === strip(sB.slice(0, -1))) return wrap(sA) + '+';
+  if (sA.endsWith('*') && sB === strip(sA.slice(0, -1))) return wrap(sB) + '+';
 
-  // Дополнительно: (a+b)(a+b)* -> (a+b)+
-  if (tA.length > 0 && tB.length > 0) {
-    const lastA = tA[tA.length - 1];
-    const firstB = tB[0];
-    if (firstB.endsWith('*') && (lastA === firstB.slice(0, -1) || wrap(lastA) === firstB.slice(0, -1))) {
-        const prefix = tA.slice(0, -1).join('');
-        const suffix = tB.slice(1).join('');
-        return simplifyConcat(simplifyConcat(prefix, wrap(lastA) + '+'), suffix);
-    }
-  }
+  // (a+b)(a+b)* -> (a+b)+
+  if (sB.endsWith('*') && sA === sB.slice(0, -1)) return sA + '+';
 
   return wrapForConcat(a) + wrapForConcat(b);
 }
 
 function simplifyStar(a: string): string {
-  if (!a || a === 'ε' || a === '∅') return '';
+  if (!a || a === 'ε') return '';
   const inner = strip(a);
   if (inner.endsWith('*') || inner.endsWith('+')) return inner.slice(0, -1) + '*';
   return wrap(inner) + '*';
 }
 
-// --- ВСПОМОГАТЕЛЬНЫЕ ФУНКЦИИ ---
+// --- УТИЛИТЫ СТРОК ---
+
+function getTokens(s: string): string[] {
+  const tokens = [];
+  let i = 0;
+  while (i < s.length) {
+    let t = "";
+    if (s[i] === '(') {
+      let b = 1, start = i++;
+      while (i < s.length && b > 0) {
+        if (s[i] === '(') b++; else if (s[i] === ')') b--;
+        i++;
+      }
+      t = s.slice(start, i);
+    } else t = s[i++];
+    while (i < s.length && (s[i] === '*' || s[i] === '+')) t += s[i++];
+    tokens.push(t);
+  }
+  return tokens;
+}
 
 function splitByOr(s: string): string[] {
-  const result: string[] = [];
-  let balance = 0, current = "";
+  const res = [];
+  let b = 0, curr = "";
   for (const c of s) {
-    if (c === '(') balance++;
-    else if (c === ')') balance--;
-    if (c === '|' && balance === 0) {
-      result.push(current);
-      current = "";
-    } else current += c;
+    if (c === '(') b++; else if (c === ')') b--;
+    if (c === '|' && b === 0) { res.push(curr); curr = ""; } else curr += c;
   }
-  result.push(current);
-  return result.filter(x => x !== "");
+  res.push(curr);
+  return res.filter(x => x !== "");
+}
+
+function isBalanced(s: string): boolean {
+  if (!s.startsWith('(') || !s.endsWith(')')) return false;
+  let b = 0;
+  for (let i = 0; i < s.length; i++) {
+    if (s[i] === '(') b++; else if (s[i] === ')') b--;
+    if (b === 0 && i < s.length - 1) return false;
+  }
+  return b === 0;
 }
 
 function strip(s: string): string {
-  if (s.startsWith('(') && s.endsWith(')')) {
-    let balance = 0;
-    for (let i = 0; i < s.length - 1; i++) {
-      if (s[i] === '(') balance++;
-      if (s[i] === ')') balance--;
-      if (balance === 0 && i > 0) return s;
-    }
-    return s.slice(1, -1);
-  }
-  return s;
+  let res = s;
+  while (isBalanced(res)) res = res.slice(1, -1);
+  return res;
 }
 
 function wrap(s: string): string {
   if (!s || s === 'ε' || s.length === 1) return s;
-  if (s.startsWith('(') && s.endsWith(')') && strip(s) !== s) return s;
+  if (s.length === 2 && (s.endsWith('*') || s.endsWith('+'))) return s;
+  if (isBalanced(s)) return s;
   return `(${s})`;
 }
 
 function wrapOr(s: string): string {
-  if (!s || s === 'ε') return 'ε';
-  return s.includes('|') ? `(${s})` : s;
+  if (s === 'ε') return 'ε';
+  return (s.includes('|') && !isBalanced(s)) ? `(${s})` : s;
 }
 
 function wrapForConcat(s: string): string {
-  return s.includes('|') && !s.startsWith('(') ? `(${s})` : s;
+  if (s.includes('|') && !isBalanced(s)) return `(${s})`;
+  return s;
 }
 
 function cleanRegex(re: string): string {
-  let res = re;
-  for (let i = 0; i < 5; i++) {
-    const old = res;
-    res = res.replace(/ε/g, '');
-    res = res.replace(/\|+/g, '|').replace(/^\||\|$/g, '');
-    res = res.replace(/\(\(([^()]+)\)\)/g, '($1)');
-    res = res.replace(/\(([a-zA-Z0-9])\)\*/g, '$1*');
-    res = res.replace(/\(([a-zA-Z0-9])\)\+/g, '$1+');
-    if (old === res) break;
-  }
+  let res = re.replace(/ε/g, '');
+
+  // 1. Убираем пустые альтернативы типа (a|) -> a? или (a+|) -> a*
+  res = res.replace(/\(([^|()]+)\+\|\)/g, '$1*');
+  res = res.replace(/\(\|\(([^|()]+)\)\+\)/g, '($1)*');
+  res = res.replace(/\(([^|()]+)\|\)/g, '($1)?');
+
+  // 2. Схлопываем итерации
+  res = res.replace(/(.)\1\+/g, '$1+');
+
+  // 3. Убираем лишние двойные скобки
+  for(let i=0; i<3; i++) res = res.replace(/\(\(([^()]+)\)\)/g, '($1)');
+
   return res || 'ε';
 }
