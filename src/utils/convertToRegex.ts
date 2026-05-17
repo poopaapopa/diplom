@@ -153,7 +153,11 @@ function factorize(terms: string[]): string {
 
   // 1. Вынос префикса
   let pLen = 0;
-  while (pLen < minLen && tokenized.every(t => t[pLen] === tokenized[0][pLen])) {
+  while (pLen < minLen) {
+    const currentPLen = pLen;
+    if (!tokenized.every(t => t[currentPLen] === tokenized[0][currentPLen])) {
+      break;
+    }
     pLen++;
   }
   if (pLen > 0) {
@@ -164,7 +168,11 @@ function factorize(terms: string[]): string {
 
   // 2. Вынос суффикса
   let sLen = 0;
-  while (sLen < minLen && tokenized.every(t => t[t.length - 1 - sLen] === tokenized[0][tokenized[0].length - 1 - sLen])) {
+  while (sLen < minLen) {
+    const currentSLen = sLen;
+    if (!tokenized.every(t => t[t.length - 1 - currentSLen] === tokenized[0][tokenized[0].length - 1 - currentSLen])) {
+      break;
+    }
     sLen++;
   }
   if (sLen > 0) {

@@ -113,6 +113,7 @@ describe('regex -> FSM -> regex round-trip', () => {
   test('b(a+b)*', () => check('b(a+b)*'));
   test('(a+b)*aa(a+b)*', () => check('(a+b)*aa(a+b)*'));
   test('1+(a+b)*bb(a+b)*', () => check('1+(a+b)*bb(a+b)*'));
+  test('(0*1*)*000', () => check('(0*1*)*000'));
 });
 
 describe('regex -> FSM -> regex: ожидаемая «красивая» форма', () => {
