@@ -58,7 +58,7 @@ export default function FsmEditor({
 }: FsmEditorProps) {
   const { screenToFlowPosition } = useReactFlow();
 
-  const onNodeDoubleClick = useCallback((event: React.MouseEvent, node: Node) => {
+  const onNodeDoubleClick = useCallback((_event: React.MouseEvent, node: Node) => {
     if (readOnly) return;
     setNodes((nds) =>
       nds.map((n) => {

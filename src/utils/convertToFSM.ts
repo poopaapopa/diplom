@@ -14,7 +14,7 @@ let endPosId = -1;
 const followpos: Map<number, Set<number>> = new Map();
 const posToChar: Map<number, string> = new Map();
 
-export const regexToFSM = (regex: string, currentNodes: Node[], currentEdges: Edge[]): { nodes: Node[]; edges: Edge[] } | null => {
+export const regexToFSM = (regex: string, currentNodes: Node[]): { nodes: Node[]; edges: Edge[] } | null => {
   if (!regex.trim()) return null;
 
   try {

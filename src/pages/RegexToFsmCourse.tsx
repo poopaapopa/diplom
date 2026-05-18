@@ -1,7 +1,7 @@
-import React, { useState, useCallback, useRef } from 'react';
+import { useState, useCallback, useRef } from 'react';
 import { Link } from 'react-router-dom';
 import { Node, Edge, applyNodeChanges, applyEdgeChanges, NodeChange, EdgeChange, Position, MarkerType } from '@xyflow/react';
-import { Check, RotateCcw, ArrowRight, ArrowLeft, X, HelpCircle } from 'lucide-react';
+import { Check, RotateCcw, ArrowRight, ArrowLeft, HelpCircle } from 'lucide-react';
 import FsmEditor from '../components/FsmEditor';
 import { regexToFsmCourse } from '../data/courses';
 import './Course.scss';

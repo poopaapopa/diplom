@@ -14,7 +14,7 @@
 
 import { fsmToRegex } from './convertToRegex';
 import { regexToFSM } from './convertToFSM';
-import { Node, Edge } from '@xyflow/react';
+import { Node } from '@xyflow/react';
 
 /** Перевод нашей внутренней регулярки в JS-RegExp.  В нашей нотации:
  *  - `|` уже совпадает с RegExp,
@@ -68,7 +68,7 @@ function roundTrip(regex: string): string {
     position: { x: 0, y: 0 },
     data: {},
   };
-  const built = regexToFSM(regex, [startAnchor], []);
+  const built = regexToFSM(regex, [startAnchor]);
   if (!built) throw new Error(`regexToFSM returned null for "${regex}"`);
   return fsmToRegex(built.nodes, built.edges);
 }

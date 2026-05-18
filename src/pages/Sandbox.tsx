@@ -11,8 +11,8 @@ import {
   MarkerType,
 } from '@xyflow/react';
 import FsmEditor from '../components/FsmEditor';
-import { fsmToRegex } from "../utils/convertToRegex.ts";
-import { regexToFSM } from "../utils/convertToFSM.ts";
+import { fsmToRegex } from "../utils/convertToRegex";
+import { regexToFSM } from "../utils/convertToFSM";
 
 const initialNodes: Node[] = [
   {
@@ -74,7 +74,7 @@ function Flow() {
   };
 
   const buildGraphFromRegex = () => {
-    const result = regexToFSM(regex, nodes, edges);
+    const result = regexToFSM(regex, nodes);
     if (result) {
       setNodes(result.nodes);
       setEdges(result.edges);
