@@ -4,7 +4,6 @@ import { Node, Edge, applyNodeChanges, applyEdgeChanges, NodeChange, EdgeChange,
 import { Check, RotateCcw, ArrowRight, ArrowLeft, X, HelpCircle } from 'lucide-react';
 import FsmEditor from '../components/FsmEditor';
 import { regexToFsmCourse } from '../data/courses';
-import { fsmToRegex } from '../utils/convertToRegex';
 import './Course.scss';
 
 const initialNodes: Node[] = [
@@ -37,6 +36,86 @@ const initialEdges: Edge[] = [
     },
   },
 ];
+
+const REGEX_META_CHARS = new Set(['(', ')', '|', '*', '+', '?']);
+
+const getRegexAlphabet = (regex: string): string[] => {
+  const alphabet = new Set<string>();
+
+  for (const char of regex) {
+    if (!REGEX_META_CHARS.has(char) && !/\s/.test(char)) {
+      alphabet.add(char);
+    }
+  }
+
+  return Array.from(alphabet);
+};
+
+const buildSampleStrings = (alphabet: string[], maxLength: number): string[] => {
+  const samples: string[] = [''];
+
+  const appendStrings = (prefix: string, remainingLength: number) => {
+    if (remainingLength === 0) return;
+
+    for (const char of alphabet) {
+      const next = prefix + char;
+      samples.push(next);
+      appendStrings(next, remainingLength - 1);
+    }
+  };
+
+  appendStrings('', maxLength);
+  return samples;
+};
+
+const getEdgeSymbol = (edge: Edge): string => {
+  const symbol = edge.data?.symbol ?? edge.data?.label ?? '';
+  return String(symbol).trim() || 'ε';
+};
+
+const acceptsString = (nodes: Node[], edges: Edge[], input: string): boolean => {
+  const initialState = nodes.find(n => n.data?.isInitial || n.id === '0' || n.id === 'q0');
+  if (!initialState) return false;
+
+  let currentStateId = initialState.id;
+
+  for (const char of input) {
+    const transition = edges.find(edge => {
+      if (edge.id === 'start-edge' || edge.source !== currentStateId) return false;
+
+      return getEdgeSymbol(edge)
+        .split(',')
+        .map(symbol => symbol.trim())
+        .includes(char);
+    });
+
+    if (!transition) return false;
+    currentStateId = transition.target;
+  }
+
+  return Boolean(nodes.find(node => node.id === currentStateId)?.data?.isFinal);
+};
+
+const validateFsmAgainstRegex = (nodes: Node[], edges: Edge[], regex: string): string | null => {
+  const alphabet = getRegexAlphabet(regex);
+  const maxLength = Math.max(8, regex.replace(/[()|*+?\s]/g, '').length + 3);
+  const targetRegex = new RegExp(`^(?:${regex})$`);
+  const samples = buildSampleStrings(alphabet, maxLength);
+
+  for (const sample of samples) {
+    const targetAccepts = targetRegex.test(sample);
+    const fsmAccepts = acceptsString(nodes, edges, sample);
+
+    if (targetAccepts !== fsmAccepts) {
+      const displaySample = sample === '' ? 'пустую строку' : `"${sample}"`;
+      return targetAccepts
+        ? `Автомат должен принимать ${displaySample}.`
+        : `Автомат не должен принимать ${displaySample}.`;
+    }
+  }
+
+  return null;
+};
 
 export default function RegexToFsmCourse() {
   const [currentLevelIndex, setCurrentLevelIndex] = useState(0);
@@ -106,28 +185,18 @@ export default function RegexToFsmCourse() {
       return;
     }
 
-    const generatedRegex = fsmToRegex(nodes, edges);
+    const validationError = validateFsmAgainstRegex(nodes, edges, level.regex);
 
-    if (generatedRegex === "Путь не найден") {
-      showError("Нет пути от начального состояния к конечному");
+    if (validationError) {
+      showError(validationError);
       return;
     }
 
-    // Simple validation: check if generated regex matches target regex
-    // Note: This is a naive check. In a real app, we might want to test equivalence.
-    // For now, we just remove spaces and compare.
-    const cleanGenerated = generatedRegex.replace(/\s+/g, '');
-    const cleanTarget = level.regex.replace(/\s+/g, '');
-    
-    if (cleanGenerated === cleanTarget) {
-      setIsCorrect(true);
-      setErrorMessage(null);
-      setIsVisible(true);
-      if (errorTimeoutRef.current) {
-        clearTimeout(errorTimeoutRef.current);
-      }
-    } else {
-      showError("Автомат построен неверно. Попробуйте еще раз.");
+    setIsCorrect(true);
+    setErrorMessage(null);
+    setIsVisible(true);
+    if (errorTimeoutRef.current) {
+      clearTimeout(errorTimeoutRef.current);
     }
   };
 
@@ -137,6 +206,8 @@ export default function RegexToFsmCourse() {
       setNodes(initialNodes);
       setEdges(initialEdges);
       setIsVisible(false);
+      setTutorialPage(1);
+      setShowTutorial(true);
       if (errorTimeoutRef.current) {
         clearTimeout(errorTimeoutRef.current);
       }
@@ -166,7 +237,7 @@ export default function RegexToFsmCourse() {
           </div>
         </div>
         <div className="header-right">
-          {currentLevelIndex === 0 && (
+          {level.tutorial && level.tutorial.length > 0 && (
             <div className="tutorial-toggle-container">
               {showHintTooltip && (
                 <div className="tutorial-hint-tooltip">
@@ -196,7 +267,7 @@ export default function RegexToFsmCourse() {
         />
       </div>
 
-      {currentLevelIndex === 0 && (
+      {level.tutorial && level.tutorial.length > 0 && (
         <div className={`tutorial-sidebar ${showTutorial ? 'open' : 'closed'}`}>
           <div className="tutorial-header">
             <div className="tutorial-controls">
@@ -207,8 +278,8 @@ export default function RegexToFsmCourse() {
               >
                 <ArrowLeft size={20} />
               </button>
-              <span className="page-indicator">{tutorialPage} / 4</span>
-              {tutorialPage < 4 ? (
+              <span className="page-indicator">{tutorialPage} / {level.tutorial.length}</span>
+              {tutorialPage < level.tutorial.length ? (
                 <button className="btn-next-page" onClick={() => setTutorialPage(prev => prev + 1)}>
                   <ArrowRight size={20} />
                 </button>
@@ -220,107 +291,12 @@ export default function RegexToFsmCourse() {
             </div>
           </div>
           <div className="tutorial-content">
-            {tutorialPage === 1 && (
-              <>
-                <h3>Конечные автоматы</h3>
-                <p>
-                  <strong>Конечный автомат</strong> — это математическая модель, которая читает строку символ за символом и в конце решает, подходит ли эта строка под заданное правило или нет.
-                </p>
-                <div style={{ display: 'flex', justifyContent: 'center', margin: '24px 0' }}>
-                  <svg width="280" height="60" viewBox="0 0 280 60">
-                    <line x1="0" y1="30" x2="15" y2="30" stroke="#333" strokeWidth="2" />
-                    <polygon points="15,25 25,30 15,35" fill="#333" />
-                    
-                    <circle cx="40" cy="30" r="14" fill="white" stroke="#222" strokeWidth="2" />
-                    <text x="40" y="34" fontSize="11" textAnchor="middle" fill="#222" fontWeight="bold">q0</text>
-                    
-                    <line x1="54" y1="30" x2="90" y2="30" stroke="#333" strokeWidth="2" />
-                    <polygon points="90,25 100,30 90,35" fill="#333" />
-                    <text x="77" y="24" fontSize="12" textAnchor="middle" fill="#333">a</text>
-                    
-                    <circle cx="115" cy="30" r="14" fill="white" stroke="#222" strokeWidth="2" />
-                    <text x="115" y="34" fontSize="11" textAnchor="middle" fill="#222" fontWeight="bold">q1</text>
-                    
-                    <line x1="129" y1="30" x2="165" y2="30" stroke="#333" strokeWidth="2" />
-                    <polygon points="165,25 175,30 165,35" fill="#333" />
-                    <text x="152" y="24" fontSize="12" textAnchor="middle" fill="#333">b</text>
-                    
-                    <circle cx="190" cy="30" r="14" fill="white" stroke="#222" strokeWidth="2" />
-                    <text x="190" y="34" fontSize="11" textAnchor="middle" fill="#222" fontWeight="bold">q2</text>
-
-                    <line x1="204" y1="30" x2="240" y2="30" stroke="#333" strokeWidth="2" />
-                    <polygon points="240,25 250,30 240,35" fill="#333" />
-                    <text x="227" y="24" fontSize="12" textAnchor="middle" fill="#333">c</text>
-
-                    <circle cx="265" cy="30" r="14" fill="white" stroke="#222" strokeWidth="2" />
-                    <circle cx="265" cy="30" r="10" fill="none" stroke="#222" strokeWidth="2" />
-                    <text x="265" y="34" fontSize="11" textAnchor="middle" fill="#222" fontWeight="bold">q3</text>
-                  </svg>
-                </div>
-              </>
-            )}
-            {tutorialPage === 2 && (
-              <>
-                <h3>Элементы автомата</h3>
-                <p>
-                  Формально автомат состоит из <strong>состояний</strong> и <strong>переходов</strong> между ними.
-                </p>
-                <div style={{ display: 'flex', alignItems: 'center', marginBottom: '12px' }}>
-                  <svg width="40" height="40" viewBox="0 0 40 40" style={{ flexShrink: 0, marginRight: '12px' }}>
-                    <circle cx="20" cy="20" r="16" fill="white" stroke="#222" strokeWidth="2" />
-                    <text x="20" y="24" fontSize="12" textAnchor="middle" fill="#222" fontWeight="bold">q0</text>
-                  </svg>
-                  <p style={{ margin: 0 }}>
-                    <strong>Состояние</strong> — это положение, в котором находится автомат после прочтения части строки. Автомат всегда начинает работу со <em>стартового состояния</em>.
-                  </p>
-                </div>
-                <div style={{ display: 'flex', alignItems: 'center', marginBottom: '12px' }}>
-                  <svg width="40" height="40" viewBox="0 0 40 40" style={{ flexShrink: 0, marginRight: '12px' }}>
-                    <circle cx="20" cy="20" r="16" fill="white" stroke="#222" strokeWidth="2" />
-                    <circle cx="20" cy="20" r="12" fill="none" stroke="#222" strokeWidth="2" />
-                    <text x="20" y="24" fontSize="12" textAnchor="middle" fill="#222" fontWeight="bold">q1</text>
-                  </svg>
-                  <p style={{ margin: 0 }}>
-                    <strong>Конечное состояние</strong> — необходимое каждому конечному автомату состояние. Если после прочтения всей строки автомат оказывается в нём, строка считается <em>допустимой</em>.
-                  </p>
-                </div>
-                <div style={{ display: 'flex', alignItems: 'center' }}>
-                  <svg width="40" height="20" viewBox="0 0 40 20" style={{ flexShrink: 0, marginRight: '12px' }}>
-                    <line x1="0" y1="10" x2="30" y2="10" stroke="#333" strokeWidth="2" />
-                    <polygon points="30,5 40,10 30,15" fill="#333" />
-                    <text x="20" y="8" fontSize="10" textAnchor="middle" fill="#333">a</text>
-                  </svg>
-                  <p style={{ margin: 0 }}>
-                    <strong>Переход</strong> — показывает, в какое состояние перейдет автомат при чтении определенного символа.
-                  </p>
-                </div>
-              </>
-            )}
-            {tutorialPage === 3 && (
-              <>
-                <h3>Виды автоматов</h3>
-                <ul className="tutorial-list">
-                <li><strong>ДКА (Детерминированные)</strong> — из каждого состояния по каждому символу есть ровно один переход.</li>
-                <li><strong>НКА (Недетерминированные)</strong> — может быть несколько переходов по одному символу или ни одного.</li>
-                <li><strong>ε-НКА</strong> — НКА, в котором возможны переходы по пустой строке (ε-переходы) без чтения символа.</li>
-                </ul>
-                <p style={{ marginTop: '12px' }}>
-                  В этом курсе мы будем строить именно <strong>ДКА</strong>.
-                </p>
-              </>
-            )}
-            {tutorialPage === 4 && (
-              <>
-                <h3>Управление редактором</h3>
-                <ul className="tutorial-list">
-                  <li><strong>Добавить состояние:</strong> Двойной клик по пустому месту.</li>
-                  <li><strong>Добавить переход:</strong> Потяните от точки справа одного состояния к точки слева другого.</li>
-                  <li><strong>Изменить переход:</strong> Кликните по текстовому полю сверху от перехода.</li>
-                  <li><strong>Добавить/удалить конечное состояние:</strong> Двойной клик по состоянию.</li>
-                  <li><strong>Удалить состояние:</strong> Кликните на состояние и нажмите Backspace.</li>
-                </ul>
-              </>
-            )}
+            {level.tutorial.map((page, index) => (
+              <div key={index} style={{ display: tutorialPage === index + 1 ? 'block' : 'none' }}>
+                <h3>{page.title}</h3>
+                {page.content}
+              </div>
+            ))}
           </div>
         </div>
       )}
