@@ -19,6 +19,7 @@ export interface FsmToRegexLevel {
   edges: Edge[];
   description: string;
   targetRegex: string; // For simple validation or hints
+  tutorial?: TutorialPage[];
 }
 
 export const regexToFsmCourse: RegexToFsmLevel[] = [
@@ -514,43 +515,306 @@ const defaultEdgeOptions = {
 export const fsmToRegexCourse: FsmToRegexLevel[] = [
   {
     id: 1,
-    description: 'Напишите регулярное выражение для этого автомата.',
+    description: 'Опишите регулярным выражением автомат, который принимает одну букву.',
     targetRegex: 'a',
     nodes: [
-      { id: 'start-anchor', type: 'input', sourcePosition: Position.Right, data: { label: '' }, position: { x: 25, y: 114.2 }, style: { opacity: 0, width: 0, height: 0, pointerEvents: 'none' } },
+      { id: 'start-anchor', type: 'input', sourcePosition: Position.Right, data: { label: '' }, position: { x: 25, y: 114.2 }, draggable: false, connectable: false, selectable: false, style: { opacity: 0, width: 0, height: 0, pointerEvents: 'none' } },
       { id: '0', type: 'fsmNode', position: { x: 100, y: 100 }, data: { label: 'q0' } },
       { id: '1', type: 'fsmNode', position: { x: 300, y: 100 }, data: { label: 'q1', isFinal: true } },
     ],
     edges: [
-      { id: 'start-edge', source: 'start-anchor', target: '0', type: 'default', markerEnd: { type: MarkerType.ArrowClosed, color: '#333' } },
-      { id: 'e1', source: '0', target: '1', data: { label: 'a' }, ...defaultEdgeOptions },
+      { id: 'start-edge', source: 'start-anchor', target: '0', targetHandle: 'main-target', type: 'default', markerEnd: { type: MarkerType.ArrowClosed, color: '#333' }, selectable: false, deletable: false },
+      { id: 'e1', source: '0', target: '1', sourceHandle: 'main-source', targetHandle: 'main-target', data: { symbol: 'a' }, ...defaultEdgeOptions },
+    ],
+    tutorial: [
+      {
+        title: 'Как читать автомат',
+        content: (
+          <>
+            <p>
+              В этом курсе задача обратная: автомат уже построен, а вам нужно записать <strong>регулярное выражение</strong>, которое описывает все принимаемые им строки.
+            </p>
+            <p>
+              Начинайте чтение со стартовой стрелки. Затем двигайтесь по переходам, выписывая символы на стрелках в том порядке, в котором автомат их читает.
+            </p>
+            <p>
+              Если путь заканчивается в <strong>конечном состоянии</strong>, строка, полученная на этом пути, входит в язык автомата.
+            </p>
+          </>
+        )
+      },
+      {
+        title: 'Один переход — один символ',
+        content: (
+          <>
+            <p>
+              Здесь из <code>q0</code> в конечное состояние <code>q1</code> ведёт ровно один переход с меткой <code>a</code>.
+            </p>
+            <p>
+              Значит, автомат принимает только одну строку: <code>a</code>. Регулярное выражение для такого автомата тоже будет просто <code>a</code>.
+            </p>
+          </>
+        )
+      }
     ],
   },
   {
     id: 2,
-    description: 'Напишите регулярное выражение для этого автомата.',
+    description: 'Опишите автомат с конечным стартовым состоянием и петлёй.',
     targetRegex: 'a*',
     nodes: [
-      { id: 'start-anchor', type: 'input', sourcePosition: Position.Right, data: { label: '' }, position: { x: 25, y: 114.2 }, style: { opacity: 0, width: 0, height: 0, pointerEvents: 'none' } },
+      { id: 'start-anchor', type: 'input', sourcePosition: Position.Right, data: { label: '' }, position: { x: 25, y: 114.2 }, draggable: false, connectable: false, selectable: false, style: { opacity: 0, width: 0, height: 0, pointerEvents: 'none' } },
       { id: '0', type: 'fsmNode', position: { x: 100, y: 100 }, data: { label: 'q0', isFinal: true } },
     ],
     edges: [
-      { id: 'start-edge', source: 'start-anchor', target: '0', type: 'default', markerEnd: { type: MarkerType.ArrowClosed, color: '#333' } },
-      { ...defaultEdgeOptions, id: 'loop-0', source: '0', target: '0', type: 'selfloop', data: { label: 'a' }, sourceHandle: 'loop-source', targetHandle: 'loop-target' },
+      { id: 'start-edge', source: 'start-anchor', target: '0', targetHandle: 'main-target', type: 'default', markerEnd: { type: MarkerType.ArrowClosed, color: '#333' }, selectable: false, deletable: false },
+      { ...defaultEdgeOptions, id: 'loop-0', source: '0', target: '0', type: 'selfloop', data: { symbol: 'a' }, sourceHandle: 'loop-source', targetHandle: 'loop-target' },
+    ],
+    tutorial: [
+      {
+        title: 'Пустая строка',
+        content: (
+          <>
+            <p>
+              Стартовое состояние уже является конечным. Это значит, что автомат может принять строку, даже не прочитав ни одного символа.
+            </p>
+            <p>
+              Такая строка называется <strong>пустой строкой</strong>. В регулярных выражениях она часто появляется как вариант «ноль повторений».
+            </p>
+          </>
+        )
+      },
+      {
+        title: 'Петля означает повторение',
+        content: (
+          <>
+            <p>
+              Петля по <code>a</code> позволяет читать букву <code>a</code> сколько угодно раз и каждый раз оставаться в принимающем состоянии.
+            </p>
+            <ul className="tutorial-list">
+              <li><em>пустая строка</em> — 0 повторений</li>
+              <li><code>a</code> — 1 повторение</li>
+              <li><code>aa</code>, <code>aaa</code>, ... — несколько повторений</li>
+            </ul>
+            <p style={{ marginTop: '12px' }}>
+              Это ровно смысл оператора <code>*</code>, поэтому ответ: <code>a*</code>.
+            </p>
+          </>
+        )
+      }
     ],
   },
   {
     id: 3,
-    description: 'Напишите регулярное выражение для этого автомата.',
+    description: 'Опишите автомат, где один переход принимает два возможных символа.',
     targetRegex: 'a|b',
     nodes: [
-      { id: 'start-anchor', type: 'input', sourcePosition: Position.Right, data: { label: '' }, position: { x: 25, y: 114.2 }, style: { opacity: 0, width: 0, height: 0, pointerEvents: 'none' } },
+      { id: 'start-anchor', type: 'input', sourcePosition: Position.Right, data: { label: '' }, position: { x: 25, y: 114.2 }, draggable: false, connectable: false, selectable: false, style: { opacity: 0, width: 0, height: 0, pointerEvents: 'none' } },
       { id: '0', type: 'fsmNode', position: { x: 100, y: 100 }, data: { label: 'q0' } },
       { id: '1', type: 'fsmNode', position: { x: 300, y: 100 }, data: { label: 'q1', isFinal: true } },
     ],
     edges: [
-      { id: 'start-edge', source: 'start-anchor', target: '0', type: 'default', markerEnd: { type: MarkerType.ArrowClosed, color: '#333' } },
-      { id: 'e1', source: '0', target: '1', data: { label: 'a,b' }, ...defaultEdgeOptions },
+      { id: 'start-edge', source: 'start-anchor', target: '0', targetHandle: 'main-target', type: 'default', markerEnd: { type: MarkerType.ArrowClosed, color: '#333' }, selectable: false, deletable: false },
+      { id: 'e1', source: '0', target: '1', sourceHandle: 'main-source', targetHandle: 'main-target', data: { symbol: 'a,b' }, ...defaultEdgeOptions },
+    ],
+    tutorial: [
+      {
+        title: 'Несколько символов на стрелке',
+        content: (
+          <>
+            <p>
+              Метка <code>a,b</code> означает: по этому переходу можно пройти, если следующий символ строки — <code>a</code> или <code>b</code>.
+            </p>
+            <p>
+              После одного такого символа автомат сразу попадает в конечное состояние, поэтому он принимает только строки <code>a</code> и <code>b</code>.
+            </p>
+          </>
+        )
+      },
+      {
+        title: 'Записываем выбор через |',
+        content: (
+          <>
+            <p>
+              В регулярных выражениях выбор между вариантами записывается оператором <code>|</code>.
+            </p>
+            <p>
+              Поэтому «или <code>a</code>, или <code>b</code>» записывается как <code>a|b</code>.
+            </p>
+          </>
+        )
+      }
+    ],
+  },
+  {
+    id: 4,
+    description: 'Опишите автомат, который читает два символа подряд.',
+    targetRegex: 'ab',
+    nodes: [
+      { id: 'start-anchor', type: 'input', sourcePosition: Position.Right, data: { label: '' }, position: { x: 25, y: 114.2 }, draggable: false, connectable: false, selectable: false, style: { opacity: 0, width: 0, height: 0, pointerEvents: 'none' } },
+      { id: '0', type: 'fsmNode', position: { x: 100, y: 100 }, data: { label: 'q0' } },
+      { id: '1', type: 'fsmNode', position: { x: 280, y: 100 }, data: { label: 'q1' } },
+      { id: '2', type: 'fsmNode', position: { x: 460, y: 100 }, data: { label: 'q2', isFinal: true } },
+    ],
+    edges: [
+      { id: 'start-edge', source: 'start-anchor', target: '0', targetHandle: 'main-target', type: 'default', markerEnd: { type: MarkerType.ArrowClosed, color: '#333' }, selectable: false, deletable: false },
+      { id: 'e1', source: '0', target: '1', sourceHandle: 'main-source', targetHandle: 'main-target', data: { symbol: 'a' }, ...defaultEdgeOptions },
+      { id: 'e2', source: '1', target: '2', sourceHandle: 'main-source', targetHandle: 'main-target', data: { symbol: 'b' }, ...defaultEdgeOptions },
+    ],
+    tutorial: [
+      {
+        title: 'Конкатенация',
+        content: (
+          <>
+            <p>
+              Если автомат идёт по цепочке переходов, символы на этих переходах записываются подряд.
+            </p>
+            <p>
+              Переход <code>q0 → q1</code> читает <code>a</code>, а затем переход <code>q1 → q2</code> читает <code>b</code>.
+            </p>
+            <p>
+              В регулярном выражении это обычная <strong>конкатенация</strong>: <code>ab</code>.
+            </p>
+          </>
+        )
+      }
+    ],
+  },
+  {
+    id: 5,
+    description: 'Опишите автомат, где после обязательной буквы можно повторять вторую.',
+    targetRegex: 'ab*',
+    nodes: [
+      { id: 'start-anchor', type: 'input', sourcePosition: Position.Right, data: { label: '' }, position: { x: 25, y: 114.2 }, draggable: false, connectable: false, selectable: false, style: { opacity: 0, width: 0, height: 0, pointerEvents: 'none' } },
+      { id: '0', type: 'fsmNode', position: { x: 100, y: 100 }, data: { label: 'q0' } },
+      { id: '1', type: 'fsmNode', position: { x: 320, y: 100 }, data: { label: 'q1', isFinal: true } },
+    ],
+    edges: [
+      { id: 'start-edge', source: 'start-anchor', target: '0', targetHandle: 'main-target', type: 'default', markerEnd: { type: MarkerType.ArrowClosed, color: '#333' }, selectable: false, deletable: false },
+      { id: 'e1', source: '0', target: '1', sourceHandle: 'main-source', targetHandle: 'main-target', data: { symbol: 'a' }, ...defaultEdgeOptions },
+      { ...defaultEdgeOptions, id: 'loop-1', source: '1', target: '1', type: 'selfloop', data: { symbol: 'b' }, sourceHandle: 'loop-source', targetHandle: 'loop-target' },
+    ],
+    tutorial: [
+      {
+        title: 'Обязательная часть',
+        content: (
+          <>
+            <p>
+              Стартовое состояние не конечное, поэтому пустая строка не принимается. Сначала нужно обязательно пройти по переходу <code>a</code>.
+            </p>
+            <p>
+              После этого автомат оказывается в конечном состоянии, значит строка <code>a</code> уже подходит.
+            </p>
+          </>
+        )
+      },
+      {
+        title: 'Повторяемая часть',
+        content: (
+          <>
+            <p>
+              В конечном состоянии есть петля по <code>b</code>. Её можно не использовать, использовать один раз или повторять сколько угодно раз.
+            </p>
+            <ul className="tutorial-list">
+              <li><code>a</code></li>
+              <li><code>ab</code></li>
+              <li><code>abb</code>, <code>abbb</code>, ...</li>
+            </ul>
+            <p style={{ marginTop: '12px' }}>
+              Поэтому регулярное выражение: <code>ab*</code>.
+            </p>
+          </>
+        )
+      }
+    ],
+  },
+  {
+    id: 6,
+    description: 'Опишите автомат, принимающий любую строку из букв a и b.',
+    targetRegex: '(a|b)*',
+    nodes: [
+      { id: 'start-anchor', type: 'input', sourcePosition: Position.Right, data: { label: '' }, position: { x: 25, y: 114.2 }, draggable: false, connectable: false, selectable: false, style: { opacity: 0, width: 0, height: 0, pointerEvents: 'none' } },
+      { id: '0', type: 'fsmNode', position: { x: 140, y: 100 }, data: { label: 'q0', isFinal: true } },
+    ],
+    edges: [
+      { id: 'start-edge', source: 'start-anchor', target: '0', targetHandle: 'main-target', type: 'default', markerEnd: { type: MarkerType.ArrowClosed, color: '#333' }, selectable: false, deletable: false },
+      { ...defaultEdgeOptions, id: 'loop-0', source: '0', target: '0', type: 'selfloop', data: { symbol: 'a,b' }, sourceHandle: 'loop-source', targetHandle: 'loop-target' },
+    ],
+    tutorial: [
+      {
+        title: 'Любая длина',
+        content: (
+          <>
+            <p>
+              Состояние <code>q0</code> конечное, поэтому автомат принимает пустую строку. Петля позволяет добавлять к строке новые символы без ограничения длины.
+            </p>
+            <p>
+              На петле указаны два символа: <code>a,b</code>. Значит, каждый следующий символ может быть либо <code>a</code>, либо <code>b</code>.
+            </p>
+          </>
+        )
+      },
+      {
+        title: 'Группировка выбора',
+        content: (
+          <>
+            <p>
+              Один символ из двух вариантов записывается как <code>a|b</code>. Чтобы повторять именно весь выбор, его нужно взять в скобки.
+            </p>
+            <p>
+              Получается <code>(a|b)*</code>: ноль или больше символов, каждый из которых — <code>a</code> или <code>b</code>.
+            </p>
+          </>
+        )
+      }
+    ],
+  },
+  {
+    id: 7,
+    description: 'Опишите автомат с повторяющимся блоком из двух символов.',
+    targetRegex: 'a(bc)*',
+    nodes: [
+      { id: 'start-anchor', type: 'input', sourcePosition: Position.Right, data: { label: '' }, position: { x: 25, y: 154.2 }, draggable: false, connectable: false, selectable: false, style: { opacity: 0, width: 0, height: 0, pointerEvents: 'none' } },
+      { id: '0', type: 'fsmNode', position: { x: 100, y: 140 }, data: { label: 'q0' } },
+      { id: '1', type: 'fsmNode', position: { x: 300, y: 140 }, data: { label: 'q1', isFinal: true } },
+      { id: '2', type: 'fsmNode', position: { x: 500, y: 140 }, data: { label: 'q2' } },
+    ],
+    edges: [
+      { id: 'start-edge', source: 'start-anchor', target: '0', targetHandle: 'main-target', type: 'default', markerEnd: { type: MarkerType.ArrowClosed, color: '#333' }, selectable: false, deletable: false },
+      { id: 'e1', source: '0', target: '1', sourceHandle: 'main-source', targetHandle: 'main-target', data: { symbol: 'a' }, ...defaultEdgeOptions },
+      { id: 'e2', source: '1', target: '2', sourceHandle: 'main-source', targetHandle: 'main-target', data: { symbol: 'b' }, ...defaultEdgeOptions },
+      { id: 'e3', source: '2', target: '1', sourceHandle: 'main-source', targetHandle: 'main-target', data: { symbol: 'c' }, ...defaultEdgeOptions },
+    ],
+    tutorial: [
+      {
+        title: 'Сначала обязательный символ',
+        content: (
+          <>
+            <p>
+              Из стартового состояния есть один обязательный переход по <code>a</code>. Без него попасть в конечное состояние нельзя.
+            </p>
+            <p>
+              После чтения <code>a</code> автомат уже находится в <code>q1</code>, а это конечное состояние. Значит, строка <code>a</code> подходит.
+            </p>
+          </>
+        )
+      },
+      {
+        title: 'Цикл из двух переходов',
+        content: (
+          <>
+            <p>
+              Чтобы вернуться из <code>q1</code> обратно в <code>q1</code>, нужно пройти два перехода: сначала <code>b</code>, затем <code>c</code>.
+            </p>
+            <p>
+              Повторяемая часть — это не отдельная буква, а блок <code>bc</code>. Поэтому блок нужно сгруппировать: <code>(bc)*</code>.
+            </p>
+            <p>
+              Итоговое выражение: <code>a(bc)*</code>.
+            </p>
+          </>
+        )
+      }
     ],
   }
 ];
